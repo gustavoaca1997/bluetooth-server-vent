@@ -35,3 +35,10 @@ You can send an `"exit"` message to kill the server. Any other kind of message w
 
 ## Tested app
 The server was tested with the app [Serial Bluetooth Terminal](https://play.google.com/store/apps/details?id=de.kai_morich.serial_bluetooth_terminal), whose UUID is `"00001101-0000-1000-8000-00805F9B34FB"`, that is why that UUID is written in the script code.
+
+## Inspiration
+This script is supposed to evolve into a Raspberry Pi program that will be used to implement a ventilator inspired on the [MIT E-Vent](https://e-vent.mit.edu/).
+
+The script was inspired on [this example](https://github.com/pybluez/pybluez/blob/master/examples/simple/rfcomm-server.py), using the [PyBluez library](https://pybluez.readthedocs.io/en/latest/index.html).
+
+The communication between the controller Android app and the server could be based on [this open source Android app](https://github.com/kai-morich/SimpleBluetoothTerminal).
