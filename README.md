@@ -33,7 +33,7 @@ Then from your Android App scan to find the server and then connect to it. You c
 }
 ```
 
-You can send an `"exit"` message to kill the server. Any other kind of message would be ignored or raise `"Parsing error"`.
+You can send an `"exit"` message to kill the server. Any other kind of message will be ignored or raise `"Parsing error"`.
 
 ## Tested app
 The server was tested with the app [Serial Bluetooth Terminal](https://play.google.com/store/apps/details?id=de.kai_morich.serial_bluetooth_terminal), whose UUID is `"00001101-0000-1000-8000-00805F9B34FB"`, that is why that UUID is written in the script code.
