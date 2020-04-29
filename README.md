@@ -23,7 +23,7 @@ Start Bluetooth server with
 python server_uuid.py
 ```
 
-Then from your Android App scan to find the server and then connect to it. You can now send bytes as messages. The servers was implemented to parse JSON messages that are similar to this one:
+Then from your Android App scan to find the server and then connect to it. You can now send bytes as messages. The server was implemented to parse JSON messages that are similar to this one:
 
 ```json
 {
