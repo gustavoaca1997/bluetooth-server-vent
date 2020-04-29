@@ -1,15 +1,17 @@
 # Bluetooth Server for an Emergency Ventilator (E-Vent)
 
 ## Instalation
-_Warning: The order of the steps is not guaranteed to be succesful, neither every step is guaranteed to be necessary. TODO: Improve these steps._
+
 ### OS Dependencies
+_Warning: The order of the following steps is not guaranteed to be succesful, neither every step is guaranteed to be necessary. TODO: Improve these steps._
+
 ```bash
 sudo apt-get install bluez bluez-utils
 sudo apt-get install python-dev
 sudo apt-get install libbluetooth-dev
 ```
 
-#### Solve bug starting a SDP server
+### Solve bug starting a SDP server
 Follow [these steps](https://raspberrypi.stackexchange.com/a/42262/119007) for successfully starting the bluetooth server.
 
 ### Python dependencies
