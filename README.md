@@ -33,6 +33,11 @@ Then from your Android App scan to find the server and then connect to it. You c
 }
 ```
 
+Each field corresponds to one of these parameters:
+- Respiratory Rate (RR) (breaths per minute): between 8 – 40.
+- Tidal Volume (TV) (air volume pushed into lung): between 200 – 800 mL based on patient weight.
+- I/E Ratio (inspiratory/expiration time ratio): recommended to start around 1:2; best if adjustable between range of 1:1 – 1:4*.
+
 You can send an `"exit"` message to kill the server. Any other kind of message will be ignored or raise `"Parsing error"`.
 
 ## Tested app
