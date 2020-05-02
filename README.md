@@ -23,6 +23,11 @@ Start Bluetooth server with
 python server_uuid.py
 ```
 
+If you get `bluetooth.btcommon.BluetoothError: no advertisable device` error, please run the following command to make the device discoverable:
+```bash
+sudo hciconfig hci0 piscan
+```
+
 Then from your Android App scan to find the server and then connect to it. You can now send bytes as messages. The server was implemented to parse JSON messages that are similar to this one:
 
 ```json
