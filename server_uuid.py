@@ -8,6 +8,7 @@ Adaptations to MIT E-Vent: Gustavo Castellanos <gustavoaca1997@gmail.com>
 """
 
 import bluetooth
+import serial
 import json
 
 ###############################################################################################################
@@ -26,10 +27,9 @@ bluetooth.advertise_service(server_sock, "SampleServer", service_id=uuid,
                             profiles=[bluetooth.SERIAL_PORT_PROFILE],
                             )
 
-print("Waiting for connection on RFCOMM channel", port)
+###############################################################################################################
 
-client_sock, client_info = server_sock.accept()
-print("Accepted connection from", client_info)
+ser = serial.Serial('/dev/ttyACM0', 9600)
 
 ###############################################################################################################
 
@@ -38,13 +38,6 @@ RR = "RR"
 TV = "TV"
 IE = "I/E"
 vent_params = [RR, TV, IE]
-
-# Valores iniciales
-vent_values = {
-    RR: 8.0,            # Respiratory Rate (RR) (breaths per minute): between 8 – 40.
-    TV: 200.0,          # Tidal Volume (TV) (air volume pushed into lung): between 200 – 800 mL based on patient weight.
-    IE: [1.0, 2.0],     # I/E Ratio (inspiratory/expiration time ratio): recommended to start around 1:2; best if adjustable between range of 1:1 – 1:4.
-}
 
 vent_params_names = {
     RR: "Respiratory Rate (RR)",
@@ -55,27 +48,36 @@ vent_params_names = {
 # Funciones que procesan a los parametros. Estas serán las que se comuniquen con la salida de la Raspberry Pi
 
 # Por ahora solo imprimen en stdout
-
+encoding = 'utf-8'
+byteError = 'Byte \'{}\' not written.'
+bytesError = 'Error writing \'{}\' as bytes.'
 def rr_func(rr):
     if 8 <= rr and rr <= 40:
-        print("{} updated to {}.".format(vent_params_names[RR], rr))
-        vent_values[RR] = rr
+        strToWrite = 'R' + str(rr)
+        assert ser.write(bytes(strToWrite, encoding=encoding)) > 1, bytesError.format(strToWrite)
+        ou = ser.readline()
+        print('Output:', ou.decode(encoding), end='')
     else:
-        print("{} out of range.".format(vent_params_names[RR]))
+        raise ValueError("{} out of range.".format(vent_params_names[RR]))
 
 def tv_func(tv):
     if 200 <= tv and tv <= 800:
-        print("{} updated to {}.".format(vent_params_names[TV], tv))
-        vent_values[TV] = tv
+        strToWrite = 'T' + str(tv)
+        assert ser.write(bytes(strToWrite, encoding=encoding)) > 1, bytesError.format(strToWrite)
+        ou = ser.readline()
+        print('Output:', ou.decode(encoding), end='')
     else:
-        print("{} out of range.".format(vent_params_names[TV]))
+        raise ValueError("{} out of range.".format(vent_params_names[TV]))
 
 def ie_func(ie):
     if 0 < ie[0] and 0 < ie[1] and ie[0] <= ie[1]:
-        print("{} updated to {}:{}".format(vent_params_names[IE], ie[0], ie[1]))
-        vent_values[IE] = ie
+        strPair = str(ie[0]) + ':' + str(ie[1])
+        strToWrite = 'I' + strPair
+        assert ser.write(bytes(strToWrite, encoding=encoding)) > 1, bytesError.format(strToWrite)
+        ou = ser.readline()
+        print('Output:', ou.decode(encoding), end='')
     else:
-        print("{} has wrong value.".format(vent_params_names[IE]))
+        raise ValueError("{} has wrong value.".format(vent_params_names[IE]))
 
 vent_funcs = {
     RR: rr_func,
@@ -86,6 +88,10 @@ vent_funcs = {
 ###############################################################################################################
 
 try:
+    print("Waiting for connection on RFCOMM channel", port)
+    client_sock, client_info = server_sock.accept()
+    print("Accepted connection from", client_info)
+
     while True:
         data = client_sock.recv(1024)
         if not data:
@@ -105,13 +111,21 @@ try:
                     vent_funcs[param](new_value)
 
         except json.decoder.JSONDecodeError:
-            print("Parsing error")
+            print("Parsing error.")
+        except ValueError as e:
+            print('Data has errors:', e)
+        except AssertionError as e:
+            print('An error occurred:', e)
 
-except OSError:
-    pass
+except:
+    print('Something bad happened')
+finally:
+    print("Disconnected.")
 
-print("Disconnected.")
-
-client_sock.close()
-server_sock.close()
-print("All done.")
+    try:
+        client_sock.close()
+    except:
+        pass
+    server_sock.close()
+    ser.close()
+    print("All done.")
