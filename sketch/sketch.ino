@@ -1,59 +1,108 @@
-float RR = 8.0,   // Respiratory Rate (RR) (breaths per minute): between 8 – 40.
-      TV = 200.0, // Tidal Volume (TV) (air volume pushed into lung): between 200 – 800 mL based on patient weight.
-      I = 1.0,    // I/E Ratio (inspiratory/expiration time ratio): recommended to start around 1:2; best if adjustable between range of 1:1 – 1:4.
-      E = 2.0;
+float RR = 0.0,   // Respiratory Rate (RR) (breaths per minute): between 8 – 40.
+      TV = 0.0,   // Tidal Volume (TV) (air volume pushed into lung): between 200 – 800 mL based on patient weight.
+      IE = 0.0;   // I/E Ratio (inspiratory/expiration time ratio): recommended to start around 1:2; best if adjustable between range of 1:1 – 1:4.
 
-/*
- * 0: Expecting byte indicating field: 'R', 'T' and 'I' correspond
- *    to RR, TV and I/E, respectively. 
- * 'R': Expecting RR value.
- * 'T': Expecting TV value.
- * 'I': Expecting I/E values.
- */
-char state = '\0';
+const char endCharacter = ':';
+
+enum BlueState {
+  OFF_BLUE_STATE,     //  0
+  ON_BLUE_STATE,      //  1
+  VOLUME_BLUE_STATE,  //  2
+  BPM_BLUE_STATE,     //  3
+  IE_BLUE_STATE       //  4
+};
+
+BlueState blueState = OFF_BLUE_STATE;
+
+BlueState charToBlueState(char c) {
+  switch (c)
+  {
+  case 'V':
+    return VOLUME_BLUE_STATE;
+
+  case 'R':
+    return BPM_BLUE_STATE;
+
+  case 'I':
+    return IE_BLUE_STATE;
+  
+  case '0':
+    return OFF_BLUE_STATE;
+    
+  default:
+    return blueState;
+  }
+}
+
+float readBluetoothValue(BlueState valueState, float* value, float (*read_fun)()) {
+  while (Serial.available() > 0 && Serial.peek() == endCharacter) {
+    Serial.read();
+  }
+  
+  if (Serial.available() > 0) {
+    if (blueState == OFF_BLUE_STATE) {
+      blueState = ON_BLUE_STATE;
+    }
+    
+    if (blueState == ON_BLUE_STATE) {
+      blueState = charToBlueState(Serial.read());
+      Serial.print("New state: ");
+      Serial.println(blueState);
+    }
+  }
+
+  if (Serial.available() > 0 && blueState == valueState) {
+    *value = Serial.parseFloat();
+    Serial.print('\t');
+    Serial.println(*value);
+    blueState = ON_BLUE_STATE;
+    return *value;
+  }
+
+  if (blueState == OFF_BLUE_STATE) {
+    return read_fun();
+  }
+  return *value;
+}
+
+float readVolume() {
+  return -1;
+}
+
+float readBpm() {
+  return -1;
+}
+
+float readIeRatio() {
+  return -1;
+}
+
+float readBluetoothVolume() {
+  return readBluetoothValue(VOLUME_BLUE_STATE, &TV, &readVolume);
+}
+
+float readBluetoothBPM() {
+  return readBluetoothValue(BPM_BLUE_STATE, &RR, &readBpm);
+}
+
+float readBluetoothIE() {
+  return readBluetoothValue(IE_BLUE_STATE, &IE, &readIeRatio);
+}
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
+  while(!Serial);
 }
+
+int i = 0;
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  if(Serial.available() > 0) 
-    {
-      switch(state) {
-        case '\0':
-          state = Serial.read();
-          break;
-        case 'R':
-          RR = Serial.parseFloat();
-          logChange("Respiration Rate changed to ", RR);
-          resetState();
-          break;
-        case 'T':
-          TV = Serial.parseFloat();
-          logChange("Tidal Volumen changed to ", TV);
-          resetState();
-          break;
-        case 'I':
-          I = Serial.parseFloat();
-          state = 'E';
-          break;
-        case 'E':
-          Serial.read(); // Delimiter
-          E = Serial.parseFloat();
-          logIEChange("I/E ratio changed to ", I, E);
-          resetState();
-          break;
-        default:
-          resetState();
-          break;
-      }
-    }
-}
+  readBluetoothVolume();
+  readBluetoothBPM();
+  readBluetoothIE();
 
-void resetState() {
-  state = '\0';
+  Serial.flush();
 }
 
 void logChange(char* msg, float val) {

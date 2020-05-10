@@ -8,6 +8,7 @@ Adaptations to MIT E-Vent: Gustavo Castellanos <gustavoaca1997@gmail.com>
 """
 
 import bluetooth
+import select
 import serial
 import json
 
@@ -51,31 +52,32 @@ vent_params_names = {
 encoding = 'utf-8'
 byteError = 'Byte \'{}\' not written.'
 bytesError = 'Error writing \'{}\' as bytes.'
-def rr_func(rr):
-    if 8 <= rr and rr <= 40:
-        strToWrite = 'R' + str(rr)
-        assert ser.write(bytes(strToWrite, encoding=encoding)) > 1, bytesError.format(strToWrite)
-        ou = ser.readline()
-        print('Output:', ou.decode(encoding), end='')
-    else:
-        raise ValueError("{} out of range.".format(vent_params_names[RR]))
+endCharacter = ':'
+
+def sendByte(c):
+    strToWrite = c.decode(encoding) + endCharacter
+    assert ser.write(bytes(strToWrite, encoding=encoding)) > 1, bytesError.format(strToWrite)
 
 def tv_func(tv):
     if 200 <= tv and tv <= 800:
-        strToWrite = 'T' + str(tv)
+        strToWrite = 'V' + "{:.3}".format(tv) + endCharacter
         assert ser.write(bytes(strToWrite, encoding=encoding)) > 1, bytesError.format(strToWrite)
-        ou = ser.readline()
-        print('Output:', ou.decode(encoding), end='')
     else:
         raise ValueError("{} out of range.".format(vent_params_names[TV]))
 
+def rr_func(rr):
+    if 8 <= rr and rr <= 40:
+        strToWrite = 'R'+ "{:.3}".format(rr) + endCharacter
+        assert ser.write(bytes(strToWrite, encoding=encoding)) > 1, bytesError.format(strToWrite)
+
+    else:
+        raise ValueError("{} out of range.".format(vent_params_names[RR]))
+
 def ie_func(ie):
     if 0 < ie[0] and 0 < ie[1] and ie[0] <= ie[1]:
-        strPair = str(ie[0]) + ':' + str(ie[1])
-        strToWrite = 'I' + strPair
+        strPair = "{:.3}".format(float(ie[0])/float(ie[1]))
+        strToWrite = 'I' + strPair + endCharacter
         assert ser.write(bytes(strToWrite, encoding=encoding)) > 1, bytesError.format(strToWrite)
-        ou = ser.readline()
-        print('Output:', ou.decode(encoding), end='')
     else:
         raise ValueError("{} has wrong value.".format(vent_params_names[IE]))
 
@@ -90,17 +92,29 @@ vent_funcs = {
 try:
     print("Waiting for connection on RFCOMM channel", port)
     client_sock, client_info = server_sock.accept()
+    client_sock.setblocking(0)
     print("Accepted connection from", client_info)
 
     while True:
+        while (ser.in_waiting):
+                ou = ser.readline()
+                print('Output:', ou.decode(encoding), end='')
+
+        sock_ready = select.select([client_sock], [], [], 5)[0]
+        if not sock_ready:
+            continue
         data = client_sock.recv(1024)
         if not data:
             continue
 
         data = data.strip() # trim
 
-        if data == b"exit":
+        if data == b"exit": # shutdown server
             break
+
+        if data == b"0":    # turn off bluetooth mode
+            sendByte(data)
+            continue
 
         try:
             in_values = json.loads(data) # parse dictionary
@@ -115,10 +129,14 @@ try:
         except ValueError as e:
             print('Data has errors:', e)
         except AssertionError as e:
-            print('An error occurred:', e)
+            print('An assertion error occurred:', e)
+        except bluetooth.btcommon.BluetoothError as e:
+            print('A Bluetooth error occurred:', e)
+        except Exception as e:
+            print('An unexpected error occurred:', e)
 
-except:
-    print('Something bad happened')
+except Exception as e:
+    print('Something bad happened:', type(e))
 finally:
     print("Disconnected.")
 
